@@ -1,5 +1,6 @@
 package com.github.couchmove.pojo;
 
+import com.couchbase.client.core.deps.com.fasterxml.jackson.annotation.JsonIgnore;
 import com.couchbase.client.java.Bucket;
 import com.vdurmont.semver4j.Semver;
 import com.vdurmont.semver4j.SemverException;
@@ -50,9 +51,17 @@ public class ChangeLog extends CouchbaseEntity implements Comparable<ChangeLog> 
     private String script;
 
     /**
-     * A unique identifier of the file or folder of the change
+     * A unique identifier of the file or folder of the change.
      */
     private String checksum;
+
+    /**
+     * Legacy identifier of the file or folder of the change.
+     * {@link #checksum} now represents a checksum based on the normalized content of the file or folder.
+     * Used for backward compatibility when migrating from an older version.
+     */
+    @JsonIgnore
+    private String checksumLegacy;
 
     /**
      * The OS username of the process that executed the change

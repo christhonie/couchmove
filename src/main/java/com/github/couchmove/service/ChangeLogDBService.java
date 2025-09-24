@@ -72,12 +72,19 @@ public class ChangeLogDBService {
                 logger.warn("Change log version '{}' checksum reset", version);
                 dbChangeLog.setChecksum(changeLog.getChecksum());
                 dbChangeLog.setCas(null);
-            } else if (!dbChangeLog.getChecksum().equals(changeLog.getChecksum())) {
-                if (dbChangeLog.getStatus() != Status.FAILED) {
-                    logger.error("Change log version '{}' checksum doesn't match, please verify if the script '{}' content was modified", changeLog.getVersion(), changeLog.getScript());
-                    throw new CouchmoveException("ChangeLog checksum doesn't match");
+            } else {
+            	// Migrate to new checksum if legacy checksum still in use
+            	if(dbChangeLog.getChecksum().equals(changeLog.getChecksumLegacy())) {
+                    logger.info("Change log version '{}' checksum being migrated to new normalized variant", changeLog.getVersion());
+                    dbChangeLog.setCas(null);
+            	}
+            	if (!dbChangeLog.getChecksum().equals(changeLog.getChecksum())) {
+                    if (dbChangeLog.getStatus() != Status.FAILED) {
+                        logger.error("Change log version '{}' checksum doesn't match, please verify if the script '{}' content was modified", changeLog.getVersion(), changeLog.getScript());
+                        throw new CouchmoveException("ChangeLog checksum doesn't match");
+                    }
+                    dbChangeLog.setStatus(null);
                 }
-                dbChangeLog.setStatus(null);
                 dbChangeLog.setChecksum(changeLog.getChecksum());
             }
             if (!dbChangeLog.getDescription().equals(changeLog.getDescription())) {

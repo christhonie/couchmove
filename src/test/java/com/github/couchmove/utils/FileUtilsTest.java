@@ -59,8 +59,35 @@ public class FileUtilsTest {
 
     @ParameterizedTest
     @MethodSource("fileSource")
-    public void should_calculate_checksum_of_file_or_folder(String path, String expectedChecksum) throws Exception {
-        assertThat(FileUtils.calculateChecksum(FileUtils.getPathFromResource(path), DESIGN_DOC.getExtension(), N1QL.getExtension())).as(path).isEqualTo(expectedChecksum);
+    public void should_calculate_checksum_of_file_or_folder_legacy(String path, String expectedChecksum) throws Exception {
+        String actual = FileUtils.calculateChecksum(
+            FileUtils.getPathFromResource(path),
+            false, DESIGN_DOC.getExtension(), N1QL.getExtension());
+
+        assertThat(actual)
+            .as("Checksum for %s (actual=%s, expected=%s)", path, actual, expectedChecksum)
+            .isEqualTo(expectedChecksum);
+    }
+
+    private static Stream<Arguments> fileSourceNormalized() {
+        return Stream.of(
+                Arguments.of(SUCCESS_PATH + "V0.1__insert_users", "7893debe05618746ec8e6d7975f060f63c41536f4e3502bbb290010f336303fc"),
+                Arguments.of(SUCCESS_PATH + "V0__create_index.n1ql", "f9e6f785874844b1962db6778d509d76034eeda6d67a2c3e53f7de1e2c580af2"),
+                Arguments.of(SUCCESS_PATH + "V1__user.json", "059c12d6baf8fd945fbd412632cab1bf94e97cc37e965a1a7bd97c094ebe967a"),
+                Arguments.of(COLLECTION_PATH + "V0.1__insert_users", "7893debe05618746ec8e6d7975f060f63c41536f4e3502bbb290010f336303fc")
+        );
+    }
+
+    @ParameterizedTest
+    @MethodSource("fileSourceNormalized")
+    public void should_calculate_checksum_of_file_or_folder_normalized(String path, String expectedChecksum) throws Exception {
+        String actual = FileUtils.calculateChecksum(
+            FileUtils.getPathFromResource(path),
+            true, DESIGN_DOC.getExtension(), N1QL.getExtension());
+
+        assertThat(actual)
+            .as("Checksum for %s (actual=%s, expected=%s)", path, actual, expectedChecksum)
+            .isEqualTo(expectedChecksum);
     }
 
     @Test

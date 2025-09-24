@@ -64,7 +64,8 @@ public class ChangeLogFileService {
                             .script(fileName)
                             .description(matcher.group(2).replace("_", " "))
                             .type(getChangeLogType(path))
-                            .checksum(FileUtils.calculateChecksum(path, DESIGN_DOC.getExtension(), N1QL.getExtension(), Type.FTS.getExtension(), EVENTING.getExtension()))
+                            .checksum(FileUtils.calculateChecksum(path, true, DESIGN_DOC.getExtension(), N1QL.getExtension(), Type.FTS.getExtension(), EVENTING.getExtension()))
+                            .checksumLegacy(FileUtils.calculateChecksum(path, false, DESIGN_DOC.getExtension(), N1QL.getExtension(), Type.FTS.getExtension(), EVENTING.getExtension()))
                             .build();
                 })
                 .filter(Objects::nonNull)

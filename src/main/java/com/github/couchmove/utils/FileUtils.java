@@ -3,6 +3,8 @@ package com.github.couchmove.utils;
 import com.github.couchmove.exception.CouchmoveException;
 import com.github.couchmove.pojo.Document;
 import lombok.SneakyThrows;
+
+import org.apache.commons.codec.binary.Hex;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.io.FilenameUtils;
 import org.apache.commons.io.IOUtils;
@@ -12,6 +14,10 @@ import org.jetbrains.annotations.Nullable;
 import java.io.*;
 import java.net.*;
 import java.nio.file.FileSystem;
+import java.security.MessageDigest;
+import java.text.Normalizer;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.*;
 import java.util.stream.*;
@@ -73,25 +79,53 @@ public class FileUtils {
      * @param extensions of files to calculate checksum of
      * @return checksum
      */
-    public static String calculateChecksum(@NotNull Path filePath, String... extensions) {
+    public static String calculateChecksum(@NotNull Path filePath, boolean normalized, String... extensions) {
         if (filePath == null || !Files.exists(filePath)) {
             throw new CouchmoveException("File is null or doesn't exists");
         }
         if (Files.isDirectory(filePath)) {
             return directoryStream(filePath, extensions)
                     .sorted(Comparator.comparing(path -> path.getFileName().toString()))
-                    .map(FileUtils::calculateChecksum)
+                    .map(p -> calculateChecksum(p, normalized))
                     .reduce(String::concat)
                     .map(DigestUtils::sha256Hex)
                     .orElse(null);
         }
         try {
-            return DigestUtils.sha256Hex(toByteArray(filePath.toUri()));
+        	if(normalized)
+        		return sha256HexOfNormalisedFile(filePath);
+        	else
+        		return DigestUtils.sha256Hex(toByteArray(filePath.toUri()));
         } catch (IOException e) {
             throw new CouchmoveException("Unable to calculate file checksum '" + filePath.getFileName().toString() + "'");
         }
     }
 
+    public static String sha256HexOfNormalisedFile(Path path, Charset cs) throws IOException {
+        MessageDigest md = DigestUtils.getSha256Digest();
+
+        try (BufferedReader r = Files.newBufferedReader(path, cs)) {
+            String line;
+            while ((line = r.readLine()) != null) {
+                // Per-line normalisation:
+                // 1) NFC composition
+                // 2) Drop U+FFFD replacement chars
+                String norm = Normalizer.normalize(line, Normalizer.Form.NFC)
+                                         .replace("\uFFFD", "");
+                // Update digest with UTF-8 bytes of the normalised line
+                DigestUtils.updateDigest(md, norm);   // uses UTF-8
+                // Canonical LF line ending between lines
+                DigestUtils.updateDigest(md, "\n");   // uses UTF-8
+            }
+        }
+
+        return Hex.encodeHexString(md.digest());
+    }
+    
+    public static String sha256HexOfNormalisedFile(Path path) throws IOException {
+        return sha256HexOfNormalisedFile(path, StandardCharsets.UTF_8);
+    }
+    
     /**
      * Read files content from a (@link File}
      *
